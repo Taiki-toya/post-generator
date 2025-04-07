@@ -5,6 +5,8 @@ import time
 import gspread
 from google.oauth2.service_account import Credentials
 import logging
+# post_generator.py
+print("✅ post_generator.py 実行されました！")
 
 # ロギングの設定
 logging.basicConfig(
