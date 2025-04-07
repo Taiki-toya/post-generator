@@ -1,3 +1,6 @@
+# post_generator.py
+print("✅ post_generator.py 実行されました！")
+
 import os
 import random
 import datetime
@@ -18,9 +21,6 @@ decoded = base64.b64decode(encoded).decode('utf-8')
 service_account_info = json.loads(decoded)
 
 credentials = Credentials.from_service_account_info(service_account_info)
-
-# post_generator.py
-print("✅ post_generator.py 実行されました！")
 
 # ロギングの設定
 logging.basicConfig(
