@@ -10,7 +10,13 @@ import json
 import os
 from google.oauth2.service_account import Credentials
 
-service_account_info = json.loads(os.environ["GOOGLE_SERVICE_ACCOUNT_JSON"])
+import os, json, base64
+
+# Base64エンコードされたJSONをデコードしてdict化
+encoded = os.environ['GOOGLE_SERVICE_ACCOUNT_JSON']
+decoded = base64.b64decode(encoded).decode('utf-8')
+service_account_info = json.loads(decoded)
+
 credentials = Credentials.from_service_account_info(service_account_info)
 
 # post_generator.py
