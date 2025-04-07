@@ -5,6 +5,14 @@ import time
 import gspread
 from google.oauth2.service_account import Credentials
 import logging
+
+import json
+import os
+from google.oauth2.service_account import Credentials
+
+service_account_info = json.loads(os.environ["GOOGLE_SERVICE_ACCOUNT_JSON"])
+credentials = Credentials.from_service_account_info(service_account_info)
+
 # post_generator.py
 print("✅ post_generator.py 実行されました！")
 
