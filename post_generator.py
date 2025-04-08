@@ -3,24 +3,12 @@ print("✅ post_generator.py 実行されました！")
 
 import os
 import random
-import datetime
 import time
+import base64
+import json
+import logging
 import gspread
 from google.oauth2.service_account import Credentials
-import logging
-
-import json
-import os
-from google.oauth2.service_account import Credentials
-
-import os, json, base64
-
-# Base64エンコードされたJSONをデコードしてdict化
-encoded = os.environ['GOOGLE_SERVICE_ACCOUNT_JSON']
-decoded = base64.b64decode(encoded).decode('utf-8')
-service_account_info = json.loads(decoded)
-
-credentials = Credentials.from_service_account_info(service_account_info)
 
 # ロギングの設定
 logging.basicConfig(
@@ -39,7 +27,7 @@ SCOPES = [
     'https://www.googleapis.com/auth/drive'
 ]
 
-# 妖艶なお姉さんの投稿文テンプレート（40代男性向け）
+# 投稿文テンプレート
 POST_TEMPLATES = [
     "この体つき、見た瞬間頭が真っ白になった...",
     "こんなカラダ実在するの？特定して今夜眠れない...",
@@ -76,25 +64,22 @@ POST_TEMPLATES = [
 class XPostGenerator:
     """X投稿文を生成してスプレッドシートに記録するクラス"""
     
-    def __init__(self, spreadsheet_id, credentials_file):
+    def __init__(self, spreadsheet_id, credentials):
         """
         初期化
         
         Args:
             spreadsheet_id: GoogleスプレッドシートのID
-            credentials_file: サービスアカウントの認証情報JSONファイルのパス
+            credentials: サービスアカウントの認証情報（Credentials オブジェクト）
         """
         self.spreadsheet_id = spreadsheet_id
-        self.credentials_file = credentials_file
+        self.credentials = credentials
         self.gc = self._authenticate()
         
     def _authenticate(self):
         """Google APIに認証"""
         try:
-            credentials = Credentials.from_service_account_file(
-                self.credentials_file, scopes=SCOPES
-            )
-            return gspread.authorize(credentials)
+            return gspread.authorize(self.credentials)
         except Exception as e:
             logger.error(f"認証エラー: {e}")
             raise
@@ -165,25 +150,59 @@ class XPostGenerator:
 
 def main():
     """メイン実行関数"""
-    # 環境変数からスプレッドシートIDと認証情報のパスを取得
-    # ここでハードコードするか、環境変数から読み込む
+    # 環境変数からスプレッドシートIDを取得
     spreadsheet_id = "1-CEFI2rEcyabviMUJsNBmX6r7V3hbsOVGxCaXbmsWe0"  # あなたのスプレッドシートID
-    credentials_file = "phonic-sunbeam-456013-r1-1795127bd5f6.json"  # サービスアカウントのJSONファイルパス
     
     try:
+        # Base64エンコードされたJSONをデコードしてdict化
+        encoded = os.environ.get('GOOGLE_SERVICE_ACCOUNT_JSON')
+        if not encoded:
+            logger.error("環境変数 GOOGLE_SERVICE_ACCOUNT_JSON が設定されていません")
+            return False
+            
+        try:
+            # Base64デコードを試みる
+            decoded = base64.b64decode(encoded).decode('utf-8')
+            logger.info("Base64デコードに成功しました")
+        except Exception as e:
+            logger.error(f"Base64デコードエラー: {e}")
+            logger.error("環境変数がBase64エンコードされたJSONではない可能性があります")
+            return False
+            
+        try:
+            # JSONとしてパース
+            service_account_info = json.loads(decoded)
+            logger.info("JSONパースに成功しました")
+        except json.JSONDecodeError as e:
+            logger.error(f"JSONパースエラー: {e}")
+            logger.error("デコードされたデータが有効なJSON形式ではありません")
+            return False
+        
+        # スコープを指定して認証情報を作成
+        credentials = Credentials.from_service_account_info(
+            service_account_info, 
+            scopes=SCOPES
+        )
+        logger.info("認証情報オブジェクトを作成しました")
+        
         # 投稿生成器を初期化
-        generator = XPostGenerator(spreadsheet_id, credentials_file)
+        generator = XPostGenerator(spreadsheet_id, credentials)
+        logger.info("XPostGenerator初期化完了")
         
         # スプレッドシートに投稿を追加
         success = generator.write_to_spreadsheet(count=10)
         
         if success:
             logger.info("投稿文の生成と書き込みが完了しました")
+            return True
         else:
             logger.error("投稿文の生成と書き込みに失敗しました")
+            return False
             
     except Exception as e:
         logger.error(f"予期しないエラーが発生しました: {e}")
+        return False
 
 if __name__ == "__main__":
-    main()
+    result = main()
+    print(f"実行結果: {'成功' if result else '失敗'}")
